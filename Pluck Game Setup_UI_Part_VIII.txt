@@ -1,0 +1,170 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Threading.Tasks;
+
+public class PluckGameForm : Form
+{
+    private Label dealerLabel;
+    private Label trumpLabel;
+    private Button playRoundButton;
+    private ListBox player1Hand;
+    private ListBox player2Hand;
+    private ListBox player3Hand;
+    private Button playCardButton;
+    private Button pluckCardButton;
+    private TextBox gameLog;
+    private Label trickLabel;
+    private Label pluckInstructionLabel;
+
+    private Game game;
+    private string currentPlayer = "Player 1";
+    private string plucker;
+    private string pluckee;
+
+    public PluckGameForm()
+    {
+        this.Text = "Pluck Card Game";
+        this.Size = new Size(800, 600);
+
+        dealerLabel = new Label() { Text = "Dealer: ", Location = new Point(20, 20), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold) };
+        trumpLabel = new Label() { Text = "Trump: ", Location = new Point(20, 50), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold) };
+        
+        playRoundButton = new Button() { Text = "Play Round", Location = new Point(20, 80), Font = new Font("Arial", 10) };
+        playRoundButton.Click += PlayRound_Click;
+
+        playCardButton = new Button() { Text = "Play Card", Location = new Point(300, 80), Font = new Font("Arial", 10) };
+        playCardButton.Click += PlayCard_Click;
+
+        pluckCardButton = new Button() { Text = "Pluck Card", Location = new Point(500, 80), Font = new Font("Arial", 10), Enabled = false };
+        pluckCardButton.Click += PluckCard_Click;
+
+        player1Hand = new ListBox() { Location = new Point(20, 120), Size = new Size(200, 150), Font = new Font("Arial", 10) };
+        player2Hand = new ListBox() { Location = new Point(300, 120), Size = new Size(200, 150), Font = new Font("Arial", 10) };
+        player3Hand = new ListBox() { Location = new Point(580, 120), Size = new Size(200, 150), Font = new Font("Arial", 10) };
+        
+        gameLog = new TextBox() { Location = new Point(20, 300), Size = new Size(760, 150), Multiline = true, ReadOnly = true, Font = new Font("Arial", 10) };
+        trickLabel = new Label() { Text = "Trick in Progress: ", Location = new Point(20, 460), Size = new Size(760, 30), Font = new Font("Arial", 12, FontStyle.Bold) };
+        pluckInstructionLabel = new Label() { Text = "", Location = new Point(20, 500), Size = new Size(760, 30), Font = new Font("Arial", 12, FontStyle.Bold) };
+
+        this.Controls.Add(dealerLabel);
+        this.Controls.Add(trumpLabel);
+        this.Controls.Add(playRoundButton);
+        this.Controls.Add(playCardButton);
+        this.Controls.Add(pluckCardButton);
+        this.Controls.Add(player1Hand);
+        this.Controls.Add(player2Hand);
+        this.Controls.Add(player3Hand);
+        this.Controls.Add(gameLog);
+        this.Controls.Add(trickLabel);
+        this.Controls.Add(pluckInstructionLabel);
+
+        game = new Game();
+        UpdateUI();
+    }
+
+    private async void PlayRound_Click(object sender, EventArgs e)
+    {
+        game.PlayRound();
+        await Task.Delay(500);
+        DeterminePluckPhase();
+        UpdateUI();
+    }
+
+    private async void PlayCard_Click(object sender, EventArgs e)
+    {
+        ListBox currentPlayerHand = GetCurrentPlayerHand();
+        if (currentPlayerHand.SelectedItem != null)
+        {
+            string selectedCard = currentPlayerHand.SelectedItem.ToString();
+            game.PlayCard(currentPlayer, selectedCard);
+            UpdateUI();
+            
+            await Task.Delay(500);
+            PlayAITurns();
+        }
+    }
+
+    private void DeterminePluckPhase()
+    {
+        var pluckInfo = game.GetPluckDetails();
+        if (pluckInfo != null)
+        {
+            plucker = pluckInfo.Item1;
+            pluckee = pluckInfo.Item2;
+            pluckInstructionLabel.Text = $"{plucker} must pluck from {pluckee}. Select a card to give.";
+            pluckCardButton.Enabled = true;
+        }
+        else
+        {
+            pluckInstructionLabel.Text = "No plucking required this round.";
+            pluckCardButton.Enabled = false;
+        }
+    }
+
+    private void PluckCard_Click(object sender, EventArgs e)
+    {
+        ListBox pluckerHand = GetPlayerHand(plucker);
+        if (pluckerHand.SelectedItem != null)
+        {
+            string selectedCard = pluckerHand.SelectedItem.ToString();
+            game.ExecutePluck(plucker, pluckee, selectedCard);
+            gameLog.Text += $"\n{plucker} plucked {selectedCard} from {pluckee}.";
+            UpdateUI();
+        }
+    }
+
+    private async void PlayAITurns()
+    {
+        List<string> aiPlayers = new List<string> { "Player 2", "Player 3" };
+        foreach (var aiPlayer in aiPlayers)
+        {
+            await Task.Delay(500);
+            string aiMove = game.GetAIMove(aiPlayer);
+            if (!string.IsNullOrEmpty(aiMove))
+            {
+                game.PlayCard(aiPlayer, aiMove);
+                gameLog.Text += $"\n{aiPlayer} played {aiMove}";
+            }
+        }
+        UpdateUI();
+    }
+}
+
+class Game
+{
+    public string GetAIMove(string player)
+    {
+        var hand = GetPlayerHand(player);
+        string leadSuit = GetCurrentLeadSuit();
+        var suitedCards = hand.Where(card => card.Contains(leadSuit)).ToList();
+        
+        if (suitedCards.Count > 0)
+        {
+            return suitedCards.OrderByDescending(card => GetCardValue(card)).First();
+        }
+
+        var trumpCards = hand.Where(card => card.Contains(GetTrumpSuit())).ToList();
+        if (trumpCards.Count > 0)
+        {
+            return trumpCards.OrderByDescending(card => GetCardValue(card)).First();
+        }
+
+        return hand.OrderBy(card => GetCardValue(card)).First();
+    }
+
+    private int GetCardValue(string card)
+    {
+        Dictionary<string, int> rankValues = new Dictionary<string, int>()
+        {
+            { "2", 2 }, { "3", 3 }, { "4", 4 }, { "5", 5 }, { "6", 6 },
+            { "7", 7 }, { "8", 8 }, { "9", 9 }, { "10", 10 }, { "J", 11 },
+            { "Q", 12 }, { "K", 13 }, { "A", 14 }, { "Little Joker", 15 }, { "Big Joker", 16 }
+        };
+        
+        string[] parts = card.Split(' ');
+        return rankValues.ContainsKey(parts[0]) ? rankValues[parts[0]] : 0;
+    }
+}

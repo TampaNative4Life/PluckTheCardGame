@@ -1,0 +1,120 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Media;
+using System.Threading.Tasks;
+using System.Net.Sockets;
+using System.Net;
+using System.Text;
+
+public class PluckGameForm : Form
+{
+    private Label dealerLabel;
+    private Label trumpLabel;
+    private Button playRoundButton;
+    private ListBox player1Hand;
+    private ListBox player2Hand;
+    private ListBox player3Hand;
+    private Button playCardButton;
+    private Button pluckCardButton;
+    private Button tutorialButton;
+    private Button hostGameButton;
+    private Button joinGameButton;
+    private TextBox gameLog;
+    private Label trickLabel;
+    private Label pluckInstructionLabel;
+    private ComboBox pluckSelectionBox;
+    private Label statsLabel;
+    private Label leaderboardLabel;
+    private SoundPlayer cardPlaySound;
+    private SoundPlayer pluckSound;
+    private Dictionary<string, int> playerWins;
+    private Dictionary<string, int> aiMemory;
+    private TcpClient client;
+    private TcpListener server;
+    private NetworkStream stream;
+    private bool isHost;
+    private const int Port = 5000;
+
+    private Game game;
+    private string currentPlayer;
+    private string plucker;
+    private string pluckee;
+
+    public PluckGameForm(bool multiplayerMode)
+    {
+        this.Text = "Pluck Card Game";
+        this.Size = new Size(900, 750);
+        this.BackColor = Color.DarkGreen;
+
+        dealerLabel = new Label() { Text = "Dealer: ", Location = new Point(20, 20), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        trumpLabel = new Label() { Text = "Trump: ", Location = new Point(20, 50), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        
+        playRoundButton = new Button() { Text = "Play Round", Location = new Point(20, 80), Font = new Font("Arial", 10), BackColor = Color.Gold };
+        playRoundButton.Click += PlayRound_Click;
+
+        playCardButton = new Button() { Text = "Play Card", Location = new Point(300, 80), Font = new Font("Arial", 10), BackColor = Color.Gold };
+        playCardButton.Click += PlayCard_Click;
+
+        pluckCardButton = new Button() { Text = "Pluck Card", Location = new Point(500, 80), Font = new Font("Arial", 10), Enabled = false, BackColor = Color.Gold };
+        pluckCardButton.Click += PluckCard_Click;
+
+        tutorialButton = new Button() { Text = "Tutorial", Location = new Point(720, 80), Font = new Font("Arial", 10), BackColor = Color.LightBlue };
+        tutorialButton.Click += ShowTutorial;
+
+        hostGameButton = new Button() { Text = "Host Game", Location = new Point(720, 120), Font = new Font("Arial", 10), BackColor = Color.LightGreen };
+        hostGameButton.Click += HostGame;
+
+        joinGameButton = new Button() { Text = "Join Game", Location = new Point(720, 160), Font = new Font("Arial", 10), BackColor = Color.LightCoral };
+        joinGameButton.Click += JoinGame;
+
+        player1Hand = new ListBox() { Location = new Point(20, 120), Size = new Size(200, 150), Font = new Font("Arial", 10), BackColor = Color.White };
+        player2Hand = new ListBox() { Location = new Point(300, 120), Size = new Size(200, 150), Font = new Font("Arial", 10), BackColor = Color.White };
+        player3Hand = new ListBox() { Location = new Point(580, 120), Size = new Size(200, 150), Font = new Font("Arial", 10), BackColor = Color.White };
+        
+        gameLog = new TextBox() { Location = new Point(20, 300), Size = new Size(860, 150), Multiline = true, ReadOnly = true, Font = new Font("Arial", 10), BackColor = Color.Black, ForeColor = Color.LimeGreen };
+        trickLabel = new Label() { Text = "Trick in Progress: ", Location = new Point(20, 460), Size = new Size(860, 30), Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        pluckInstructionLabel = new Label() { Text = "", Location = new Point(20, 500), Size = new Size(860, 30), Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        
+        pluckSelectionBox = new ComboBox() { Location = new Point(20, 530), Size = new Size(200, 30), Enabled = false, BackColor = Color.White };
+
+        statsLabel = new Label() { Text = "Statistics:\nPlayer 1: 0 Wins | Player 2: 0 Wins | Player 3: 0 Wins", Location = new Point(20, 580), Size = new Size(860, 50), Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        leaderboardLabel = new Label() { Text = "Leaderboard:\n1. -\n2. -\n3. -", Location = new Point(20, 640), Size = new Size(860, 80), Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+
+        this.Controls.Add(dealerLabel);
+        this.Controls.Add(trumpLabel);
+        this.Controls.Add(playRoundButton);
+        this.Controls.Add(playCardButton);
+        this.Controls.Add(pluckCardButton);
+        this.Controls.Add(tutorialButton);
+        this.Controls.Add(hostGameButton);
+        this.Controls.Add(joinGameButton);
+        this.Controls.Add(player1Hand);
+        this.Controls.Add(player2Hand);
+        this.Controls.Add(player3Hand);
+        this.Controls.Add(gameLog);
+        this.Controls.Add(trickLabel);
+        this.Controls.Add(pluckInstructionLabel);
+        this.Controls.Add(pluckSelectionBox);
+        this.Controls.Add(statsLabel);
+        this.Controls.Add(leaderboardLabel);
+    }
+
+    private void HostGame(object sender, EventArgs e)
+    {
+        server = new TcpListener(IPAddress.Any, Port);
+        server.Start();
+        stream = server.AcceptTcpClient().GetStream();
+        isHost = true;
+        MessageBox.Show("Game Hosted. Waiting for players...", "Multiplayer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+
+    private void JoinGame(object sender, EventArgs e)
+    {
+        client = new TcpClient("127.0.0.1", Port);
+        stream = client.GetStream();
+        MessageBox.Show("Connected to Host!", "Multiplayer", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+}

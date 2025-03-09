@@ -1,0 +1,175 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+using System.Drawing;
+
+public class PluckGameForm : Form
+{
+    private Label dealerLabel;
+    private Label trumpLabel;
+    private Button playRoundButton;
+    private ListBox player1Hand;
+    private ListBox player2Hand;
+    private ListBox player3Hand;
+    private Button playCardButton;
+    private Button pluckCardButton;
+    private TextBox gameLog;
+    private Label trickLabel;
+    private Label pluckInstructionLabel;
+
+    private Game game;
+    private string currentPlayer = "Player 1";
+    private string plucker;
+    private string pluckee;
+
+    public PluckGameForm()
+    {
+        this.Text = "Pluck Card Game";
+        this.Size = new Size(800, 600);
+
+        dealerLabel = new Label() { Text = "Dealer: ", Location = new Point(20, 20), AutoSize = true };
+        trumpLabel = new Label() { Text = "Trump: ", Location = new Point(20, 50), AutoSize = true };
+        
+        playRoundButton = new Button() { Text = "Play Round", Location = new Point(20, 80) };
+        playRoundButton.Click += PlayRound_Click;
+
+        playCardButton = new Button() { Text = "Play Card", Location = new Point(300, 80) };
+        playCardButton.Click += PlayCard_Click;
+
+        pluckCardButton = new Button() { Text = "Pluck Card", Location = new Point(500, 80), Enabled = false };
+        pluckCardButton.Click += PluckCard_Click;
+
+        player1Hand = new ListBox() { Location = new Point(20, 120), Size = new Size(200, 150) };
+        player2Hand = new ListBox() { Location = new Point(300, 120), Size = new Size(200, 150) };
+        player3Hand = new ListBox() { Location = new Point(580, 120), Size = new Size(200, 150) };
+        
+        gameLog = new TextBox() { Location = new Point(20, 300), Size = new Size(760, 150), Multiline = true, ReadOnly = true };
+        trickLabel = new Label() { Text = "Trick in Progress: ", Location = new Point(20, 460), Size = new Size(760, 30) };
+        pluckInstructionLabel = new Label() { Text = "", Location = new Point(20, 500), Size = new Size(760, 30) };
+
+        this.Controls.Add(dealerLabel);
+        this.Controls.Add(trumpLabel);
+        this.Controls.Add(playRoundButton);
+        this.Controls.Add(playCardButton);
+        this.Controls.Add(pluckCardButton);
+        this.Controls.Add(player1Hand);
+        this.Controls.Add(player2Hand);
+        this.Controls.Add(player3Hand);
+        this.Controls.Add(gameLog);
+        this.Controls.Add(trickLabel);
+        this.Controls.Add(pluckInstructionLabel);
+
+        game = new Game();
+        UpdateUI();
+    }
+
+    private void PlayRound_Click(object sender, EventArgs e)
+    {
+        game.PlayRound();
+        DeterminePluckPhase();
+        UpdateUI();
+    }
+
+    private void PlayCard_Click(object sender, EventArgs e)
+    {
+        ListBox currentPlayerHand = GetCurrentPlayerHand();
+        if (currentPlayerHand.SelectedItem != null)
+        {
+            string selectedCard = currentPlayerHand.SelectedItem.ToString();
+            game.PlayCard(currentPlayer, selectedCard);
+            UpdateUI();
+            
+            // AI plays after human
+            PlayAITurns();
+        }
+    }
+
+    private void DeterminePluckPhase()
+    {
+        var pluckInfo = game.GetPluckDetails();
+        if (pluckInfo != null)
+        {
+            plucker = pluckInfo.Item1;
+            pluckee = pluckInfo.Item2;
+            pluckInstructionLabel.Text = $"{plucker} must pluck from {pluckee}. Select a card to give.";
+            pluckCardButton.Enabled = true;
+        }
+        else
+        {
+            pluckInstructionLabel.Text = "No plucking required this round.";
+            pluckCardButton.Enabled = false;
+        }
+    }
+
+    private void PluckCard_Click(object sender, EventArgs e)
+    {
+        ListBox pluckerHand = GetPlayerHand(plucker);
+        if (pluckerHand.SelectedItem != null)
+        {
+            string selectedCard = pluckerHand.SelectedItem.ToString();
+            game.ExecutePluck(plucker, pluckee, selectedCard);
+            gameLog.Text += $"\n{plucker} plucked {selectedCard} from {pluckee}.";
+            UpdateUI();
+        }
+    }
+
+    private void PlayAITurns()
+    {
+        List<string> aiPlayers = new List<string> { "Player 2", "Player 3" };
+        foreach (var aiPlayer in aiPlayers)
+        {
+            string aiMove = game.GetAIMove(aiPlayer);
+            if (!string.IsNullOrEmpty(aiMove))
+            {
+                game.PlayCard(aiPlayer, aiMove);
+                gameLog.Text += $"\n{aiPlayer} played {aiMove}";
+            }
+        }
+        UpdateUI();
+    }
+
+    private ListBox GetCurrentPlayerHand()
+    {
+        if (currentPlayer == "Player 1") return player1Hand;
+        if (currentPlayer == "Player 2") return player2Hand;
+        return player3Hand;
+    }
+
+    private ListBox GetPlayerHand(string player)
+    {
+        if (player == "Player 1") return player1Hand;
+        if (player == "Player 2") return player2Hand;
+        return player3Hand;
+    }
+
+    private void UpdateUI()
+    {
+        dealerLabel.Text = $"Dealer: {game.GetDealer()}";
+        trumpLabel.Text = $"Trump: {game.GetTrumpSuit()}";
+
+        player1Hand.Items.Clear();
+        player2Hand.Items.Clear();
+        player3Hand.Items.Clear();
+
+        foreach (var card in game.GetPlayerHand("Player 1"))
+            player1Hand.Items.Add(card);
+        foreach (var card in game.GetPlayerHand("Player 2"))
+            player2Hand.Items.Add(card);
+        foreach (var card in game.GetPlayerHand("Player 3"))
+            player3Hand.Items.Add(card);
+
+        trickLabel.Text = $"Trick in Progress: {game.GetCurrentTrick()}";
+        gameLog.Text += "\n" + game.GetLatestLog();
+    }
+}
+
+class Program
+{
+    [STAThread]
+    static void Main()
+    {
+        Application.EnableVisualStyles();
+        Application.Run(new PluckGameForm());
+    }
+}

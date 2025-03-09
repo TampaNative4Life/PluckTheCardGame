@@ -1,0 +1,148 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Card
+{
+    public string Suit { get; set; }
+    public string Rank { get; set; }
+
+    public Card(string suit, string rank)
+    {
+        Suit = suit;
+        Rank = rank;
+    }
+
+    public override string ToString()
+    {
+        return $"{Rank} of {Suit}";
+    }
+}
+
+class Deck
+{
+    private List<Card> cards;
+    private static readonly string[] Suits = { "Hearts", "Diamonds", "Clubs", "Spades" };
+    private static readonly string[] Ranks = { "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
+
+    public Deck()
+    {
+        cards = CreateDeck();
+    }
+
+    private List<Card> CreateDeck()
+    {
+        List<Card> deck = new List<Card>();
+        foreach (string suit in Suits)
+        {
+            foreach (string rank in Ranks)
+            {
+                if (!(rank == "2" && suit != "Clubs")) // Remove all deuces except 2 of Clubs
+                {
+                    deck.Add(new Card(suit, rank));
+                }
+            }
+        }
+        deck.Add(new Card("Joker", "Big Joker"));
+        deck.Add(new Card("Joker", "Little Joker"));
+        return deck;
+    }
+
+    public void Shuffle()
+    {
+        Random rng = new Random();
+        for (int i = cards.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (cards[i], cards[j]) = (cards[j], cards[i]);
+        }
+    }
+
+    public Dictionary<string, List<Card>> Deal(int numPlayers, int cardsPerPlayer)
+    {
+        Dictionary<string, List<Card>> hands = new Dictionary<string, List<Card>>();
+        for (int i = 1; i <= numPlayers; i++)
+        {
+            hands[$"Player {i}"] = new List<Card>();
+        }
+
+        for (int i = 0; i < cardsPerPlayer; i++)
+        {
+            foreach (var player in hands.Keys)
+            {
+                hands[player].Add(cards[0]);
+                cards.RemoveAt(0);
+            }
+        }
+        return hands;
+    }
+}
+
+class Game
+{
+    private Dictionary<string, List<Card>> hands;
+    private Dictionary<string, int> trickTargets = new Dictionary<string, int>
+    {
+        { "Dealer", 7 },
+        { "Left of Dealer", 6 },
+        { "Right of Dealer", 4 }
+    };
+    private Dictionary<string, int> tricksWon = new Dictionary<string, int>();
+    private string dealer;
+    
+    public Game()
+    {
+        Deck deck = new Deck();
+        deck.Shuffle();
+        string[] players = { "Player 1", "Player 2", "Player 3" };
+        Random rng = new Random();
+        dealer = players[rng.Next(players.Length)];
+        Console.WriteLine($"Dealer: {dealer}\n");
+        hands = deck.Deal(3, 17);
+        
+        foreach (var player in hands)
+        {
+            Console.WriteLine($"{player.Key}'s hand: {string.Join(", ", player.Value)}\n");
+        }
+    }
+
+    public void Pluck(string plucker, string pluckee)
+    {
+        var pluckerHand = hands[plucker];
+        var pluckeeHand = hands[pluckee];
+        
+        // Find the lowest card in the plucker's hand
+        var lowestCard = pluckerHand.OrderBy(card => card.Rank).First();
+        pluckerHand.Remove(lowestCard);
+        
+        // Find the highest card in the same suit in the pluckee's hand
+        var pluckeeCardsInSuit = pluckeeHand.Where(card => card.Suit == lowestCard.Suit).ToList();
+        if (pluckeeCardsInSuit.Count > 0)
+        {
+            var highestCard = pluckeeCardsInSuit.OrderByDescending(card => card.Rank).First();
+            pluckeeHand.Remove(highestCard);
+            
+            // Swap the cards
+            pluckerHand.Add(highestCard);
+            pluckeeHand.Add(lowestCard);
+            
+            Console.WriteLine($"{plucker} plucked {lowestCard} from {pluckee}, who returned {highestCard}.");
+        }
+        else
+        {
+            Console.WriteLine($"{pluckee} had no cards in the suit of {lowestCard}, so no pluck occurred.");
+            pluckerHand.Add(lowestCard); // Return the card if no swap was possible
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Game game = new Game();
+        
+        // Example Pluck round
+        game.Pluck("Player 1", "Player 2");
+    }
+}

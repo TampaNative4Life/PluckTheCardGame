@@ -1,0 +1,144 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Media;
+using System.Threading.Tasks;
+using System.Net.Sockets;
+using System.Net;
+using System.Text;
+using System.Threading;
+
+public class PluckGameForm : Form
+{
+    private Label dealerLabel;
+    private Label trumpLabel;
+    private Button playRoundButton;
+    private Button startTournamentButton;
+    private Button rankedMatchButton;
+    private Button achievementsButton;
+    private Button spectatorModeButton;
+    private Button dailyChallengeButton;
+    private Button battlePassButton;
+    private Button leaderboardButton;
+    private ListBox[] playerHands;
+    private PictureBox[] playerAvatars;
+    private Button playCardButton;
+    private Button pluckCardButton;
+    private Button tutorialButton;
+    private Button settingsButton;
+    private Button replayButton;
+    private TextBox gameLog;
+    private Label trickLabel;
+    private Label pluckInstructionLabel;
+    private ComboBox pluckSelectionBox;
+    private Label statsLabel;
+    private Label leaderboardLabel;
+    private Label battlePassLabel;
+    private int playerXP;
+    private int battlePassLevel;
+    private Dictionary<int, string> battlePassRewards;
+    private Dictionary<string, int> playerRankings;
+    private Dictionary<string, string> playerAchievements;
+    private Dictionary<string, string> aiPersonalities;
+    private Dictionary<string, string> aiEmotions;
+    private Dictionary<string, int> aiLearning;
+    private bool isTournamentMode;
+    private bool isSpectatorMode;
+    private string selectedTheme = "Classic";
+    private TcpClient client;
+    private TcpListener server;
+    private List<TcpClient> connectedClients;
+    private const int Port = 5000;
+    
+    private Game game;
+    private string currentPlayer;
+    private string plucker;
+    private string pluckee;
+
+    public PluckGameForm(bool multiplayerMode)
+    {
+        this.Text = "Pluck Card Game - AI Learning & Optimized Networking";
+        this.Size = new Size(1000, 1150);
+        SetTheme(selectedTheme);
+
+        dealerLabel = new Label() { Text = "Dealer: ", Location = new Point(20, 20), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        trumpLabel = new Label() { Text = "Trump: ", Location = new Point(20, 50), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        
+        playRoundButton = new Button() { Text = "Play Round", Location = new Point(20, 80), Font = new Font("Arial", 10), BackColor = Color.Gold };
+        playRoundButton.Click += PlayRound_Click;
+
+        startTournamentButton = new Button() { Text = "Start Tournament", Location = new Point(300, 80), Font = new Font("Arial", 10), BackColor = Color.Red };
+        startTournamentButton.Click += StartTournament;
+        
+        rankedMatchButton = new Button() { Text = "Find Ranked Match", Location = new Point(600, 80), Font = new Font("Arial", 10), BackColor = Color.Cyan };
+        rankedMatchButton.Click += StartRankedMatch;
+        
+        achievementsButton = new Button() { Text = "Achievements", Location = new Point(720, 80), Font = new Font("Arial", 10), BackColor = Color.LightBlue };
+        achievementsButton.Click += ShowAchievements;
+        
+        spectatorModeButton = new Button() { Text = "Spectator Mode", Location = new Point(20, 120), Font = new Font("Arial", 10), BackColor = Color.Purple };
+        spectatorModeButton.Click += EnableSpectatorMode;
+        
+        dailyChallengeButton = new Button() { Text = "Daily Challenge", Location = new Point(300, 120), Font = new Font("Arial", 10), BackColor = Color.Yellow };
+        dailyChallengeButton.Click += ShowDailyChallenge;
+
+        battlePassButton = new Button() { Text = "Battle Pass", Location = new Point(600, 120), Font = new Font("Arial", 10), BackColor = Color.Orange };
+        battlePassButton.Click += ShowBattlePassProgress;
+        
+        leaderboardButton = new Button() { Text = "Leaderboard", Location = new Point(720, 120), Font = new Font("Arial", 10), BackColor = Color.Green };
+        leaderboardButton.Click += ShowLeaderboard;
+
+        gameLog = new TextBox() { Location = new Point(20, 500), Size = new Size(960, 200), Multiline = true, ReadOnly = true, Font = new Font("Arial", 10), BackColor = Color.Black, ForeColor = Color.LimeGreen };
+        trickLabel = new Label() { Text = "Trick in Progress: ", Location = new Point(20, 710), Size = new Size(960, 30), Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+
+        this.Controls.Add(dealerLabel);
+        this.Controls.Add(trumpLabel);
+        this.Controls.Add(playRoundButton);
+        this.Controls.Add(startTournamentButton);
+        this.Controls.Add(rankedMatchButton);
+        this.Controls.Add(achievementsButton);
+        this.Controls.Add(spectatorModeButton);
+        this.Controls.Add(dailyChallengeButton);
+        this.Controls.Add(battlePassButton);
+        this.Controls.Add(leaderboardButton);
+        this.Controls.Add(gameLog);
+        this.Controls.Add(trickLabel);
+
+        aiLearning = new Dictionary<string, int>();
+        connectedClients = new List<TcpClient>();
+    }
+
+    private void OptimizeNetworking()
+    {
+        server = new TcpListener(IPAddress.Any, Port);
+        server.Start();
+        Task.Run(() => AcceptClients());
+    }
+
+    private void AcceptClients()
+    {
+        while (connectedClients.Count < 6)
+        {
+            TcpClient client = server.AcceptTcpClient();
+            connectedClients.Add(client);
+        }
+    }
+
+    private void UpdateAILearning(string ai, int outcome)
+    {
+        if (!aiLearning.ContainsKey(ai)) aiLearning[ai] = 1200;
+        aiLearning[ai] += outcome;
+        gameLog.Text += $"\n{ai} adjusted learning score to {aiLearning[ai]}";
+    }
+
+    private void AdaptAIPlaystyle()
+    {
+        foreach (var ai in aiLearning.Keys.ToList())
+        {
+            int decisionAdjustment = aiLearning[ai] > 1300 ? 10 : -10;
+            gameLog.Text += $"\n{ai} is adapting strategies based on performance.";
+        }
+    }
+}

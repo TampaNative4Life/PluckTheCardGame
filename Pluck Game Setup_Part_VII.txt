@@ -1,0 +1,198 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+class Card
+{
+    public string Suit { get; set; }
+    public string Rank { get; set; }
+
+    public Card(string suit, string rank)
+    {
+        Suit = suit;
+        Rank = rank;
+    }
+
+    public override string ToString()
+    {
+        return $"{Rank} of {Suit}";
+    }
+}
+
+class Deck
+{
+    private List<Card> cards;
+    private static readonly string[] Suits = { "Hearts", "Diamonds", "Clubs", "Spades" };
+    private static readonly string[] Ranks = { "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
+
+    public Deck()
+    {
+        cards = CreateDeck();
+    }
+
+    private List<Card> CreateDeck()
+    {
+        List<Card> deck = new List<Card>();
+        foreach (string suit in Suits)
+        {
+            foreach (string rank in Ranks)
+            {
+                if (!(rank == "2" && suit != "Clubs")) // Remove all deuces except 2 of Clubs
+                {
+                    deck.Add(new Card(suit, rank));
+                }
+            }
+        }
+        deck.Add(new Card("Joker", "Big Joker"));
+        deck.Add(new Card("Joker", "Little Joker"));
+        return deck;
+    }
+
+    public void Shuffle()
+    {
+        Random rng = new Random();
+        for (int i = cards.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (cards[i], cards[j]) = (cards[j], cards[i]);
+        }
+    }
+
+    public Dictionary<string, List<Card>> Deal(int numPlayers, int cardsPerPlayer)
+    {
+        Dictionary<string, List<Card>> hands = new Dictionary<string, List<Card>>();
+        for (int i = 1; i <= numPlayers; i++)
+        {
+            hands[$"Player {i}"] = new List<Card>();
+        }
+
+        for (int i = 0; i < cardsPerPlayer; i++)
+        {
+            foreach (var player in hands.Keys)
+            {
+                hands[player].Add(cards[0]);
+                cards.RemoveAt(0);
+            }
+        }
+        return hands;
+    }
+}
+
+class Game
+{
+    private Dictionary<string, List<Card>> hands;
+    private string dealer;
+    private string trumpSuit;
+    private string leadPlayer;
+    private Dictionary<string, int> tricksWon = new Dictionary<string, int>();
+    private Dictionary<string, int> trickTargets = new Dictionary<string, int>();
+    private int roundNumber = 1;
+    private string[] players = { "Player 1", "Player 2", "Player 3" };
+
+    public Game()
+    {
+        StartNewRound();
+    }
+
+    private void StartNewRound()
+    {
+        Console.WriteLine($"--- Starting Round {roundNumber} ---\n");
+        Deck deck = new Deck();
+        deck.Shuffle();
+        dealer = players[(roundNumber - 1) % 3]; // Rotate dealer each round
+        Console.WriteLine($"Dealer: {dealer}\n");
+        hands = deck.Deal(3, 17);
+        leadPlayer = "Player 1"; // First player starts, updated dynamically later
+        
+        trickTargets[dealer] = 7;
+        trickTargets[players[(Array.IndexOf(players, dealer) + 1) % 3]] = 6;
+        trickTargets[players[(Array.IndexOf(players, dealer) + 2) % 3]] = 4;
+        tricksWon.Clear();
+    }
+
+    public void SetTrumpSuit(string suit)
+    {
+        trumpSuit = suit;
+        Console.WriteLine($"Trump suit is set to: {trumpSuit}\n");
+    }
+
+    public void PlayRound()
+    {
+        for (int i = 0; i < 17; i++)
+        {
+            PlayTrick();
+        }
+        CalculatePlucks();
+        roundNumber++;
+        StartNewRound();
+    }
+
+    private void PlayTrick()
+    {
+        List<(string, Card)> trick = new List<(string, Card)>();
+        string leadSuit = "";
+        
+        foreach (var player in hands.Keys)
+        {
+            var playableCards = hands[player].Where(c => leadSuit == "" || c.Suit == leadSuit).ToList();
+            Card playedCard = playableCards.Count > 0 ? playableCards.Last() : hands[player][0];
+            hands[player].Remove(playedCard);
+            
+            if (leadSuit == "")
+                leadSuit = playedCard.Suit;
+            
+            trick.Add((player, playedCard));
+            Console.WriteLine($"{player} plays {playedCard}");
+        }
+        
+        var winningCard = trick.OrderByDescending(c => c.Item2.Suit == trumpSuit ? 1 : 0)
+                               .ThenByDescending(c => Array.IndexOf(Deck.Ranks, c.Item2.Rank))
+                               .First();
+
+        Console.WriteLine($"{winningCard.Item1} wins the trick with {winningCard.Item2}!\n");
+        tricksWon[winningCard.Item1] = tricksWon.GetValueOrDefault(winningCard.Item1, 0) + 1;
+        leadPlayer = winningCard.Item1;
+    }
+
+    private void CalculatePlucks()
+    {
+        Dictionary<string, int> pluckCounts = new Dictionary<string, int>();
+        foreach (var player in trickTargets.Keys)
+        {
+            int difference = tricksWon.GetValueOrDefault(player, 0) - trickTargets[player];
+            pluckCounts[player] = difference;
+        }
+        
+        var plucker = pluckCounts.OrderByDescending(x => x.Value).First().Key;
+        var pluckee = pluckCounts.OrderBy(x => x.Value).First().Key;
+        
+        if (pluckCounts[plucker] > 0 && pluckCounts[pluckee] < 0)
+        {
+            Console.WriteLine($"{plucker} gets to pluck {pluckee}!");
+            Pluck(plucker, pluckee);
+        }
+    }
+
+    private void Pluck(string plucker, string pluckee)
+    {
+        var pluckerHand = hands[plucker];
+        var pluckeeHand = hands[pluckee];
+        var lowestCard = pluckerHand.OrderBy(c => Array.IndexOf(Deck.Ranks, c.Rank)).First();
+        var highestCard = pluckeeHand.OrderByDescending(c => Array.IndexOf(Deck.Ranks, c.Rank)).First();
+        pluckerHand.Remove(lowestCard);
+        pluckeeHand.Remove(highestCard);
+        pluckerHand.Add(highestCard);
+        pluckeeHand.Add(lowestCard);
+        Console.WriteLine($"{plucker} plucked {lowestCard} from {pluckee}, who returned {highestCard}.");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Game game = new Game();
+        game.SetTrumpSuit("Hearts");
+        game.PlayRound();
+    }
+}

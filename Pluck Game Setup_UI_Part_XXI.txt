@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Media;
+using System.Threading.Tasks;
+using System.Net.Sockets;
+using System.Net;
+using System.Text;
+using System.Threading;
+
+public class PluckGameForm : Form
+{
+    private Label dealerLabel;
+    private Label trumpLabel;
+    private Button playRoundButton;
+    private Button startTournamentButton;
+    private ListBox[] playerHands;
+    private Button playCardButton;
+    private Button pluckCardButton;
+    private Button tutorialButton;
+    private Button settingsButton;
+    private Button replayButton;
+    private TextBox gameLog;
+    private Label trickLabel;
+    private Label pluckInstructionLabel;
+    private ComboBox pluckSelectionBox;
+    private Label statsLabel;
+    private Label leaderboardLabel;
+    private SoundPlayer cardPlaySound;
+    private SoundPlayer pluckSound;
+    private Dictionary<string, int> playerWins;
+    private Queue<List<string>> tournamentRounds;
+    private bool isTournamentMode;
+
+    private Game game;
+    private string currentPlayer;
+    private string plucker;
+    private string pluckee;
+
+    public PluckGameForm(bool multiplayerMode)
+    {
+        this.Text = "Pluck Card Game - Tournament Mode";
+        this.Size = new Size(1000, 1000);
+        this.BackColor = Color.DarkGreen;
+
+        dealerLabel = new Label() { Text = "Dealer: ", Location = new Point(20, 20), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        trumpLabel = new Label() { Text = "Trump: ", Location = new Point(20, 50), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        
+        playRoundButton = new Button() { Text = "Play Round", Location = new Point(20, 80), Font = new Font("Arial", 10), BackColor = Color.Gold };
+        playRoundButton.Click += PlayRound_Click;
+
+        startTournamentButton = new Button() { Text = "Start Tournament", Location = new Point(300, 80), Font = new Font("Arial", 10), BackColor = Color.Red };
+        startTournamentButton.Click += StartTournament;
+
+        playCardButton = new Button() { Text = "Play Card", Location = new Point(20, 120), Font = new Font("Arial", 10), BackColor = Color.Gold };
+        playCardButton.Click += PlayCard_Click;
+
+        pluckCardButton = new Button() { Text = "Pluck Card", Location = new Point(300, 120), Font = new Font("Arial", 10), Enabled = false, BackColor = Color.Gold };
+        pluckCardButton.Click += PluckCard_Click;
+
+        tutorialButton = new Button() { Text = "Tutorial", Location = new Point(720, 80), Font = new Font("Arial", 10), BackColor = Color.LightBlue };
+        tutorialButton.Click += ShowTutorial;
+
+        settingsButton = new Button() { Text = "Settings", Location = new Point(720, 120), Font = new Font("Arial", 10), BackColor = Color.Orange };
+        settingsButton.Click += OpenSettings;
+
+        replayButton = new Button() { Text = "Replay Match", Location = new Point(720, 160), Font = new Font("Arial", 10), BackColor = Color.LightGreen, Enabled = false };
+        replayButton.Click += StartReplay;
+
+        gameLog = new TextBox() { Location = new Point(20, 500), Size = new Size(960, 200), Multiline = true, ReadOnly = true, Font = new Font("Arial", 10), BackColor = Color.Black, ForeColor = Color.LimeGreen };
+        trickLabel = new Label() { Text = "Trick in Progress: ", Location = new Point(20, 710), Size = new Size(960, 30), Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+
+        this.Controls.Add(dealerLabel);
+        this.Controls.Add(trumpLabel);
+        this.Controls.Add(playRoundButton);
+        this.Controls.Add(startTournamentButton);
+        this.Controls.Add(playCardButton);
+        this.Controls.Add(pluckCardButton);
+        this.Controls.Add(tutorialButton);
+        this.Controls.Add(settingsButton);
+        this.Controls.Add(replayButton);
+        this.Controls.Add(gameLog);
+        this.Controls.Add(trickLabel);
+
+        playerWins = new Dictionary<string, int>();
+        tournamentRounds = new Queue<List<string>>();
+        isTournamentMode = false;
+    }
+
+    private void StartTournament(object sender, EventArgs e)
+    {
+        isTournamentMode = true;
+        gameLog.Text += "\nTournament Mode Started! Players will compete in elimination rounds.";
+        tournamentRounds.Enqueue(new List<string> { "Player 1", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6" });
+        NextTournamentRound();
+    }
+
+    private void NextTournamentRound()
+    {
+        if (tournamentRounds.Count == 1)
+        {
+            gameLog.Text += "\nTournament Winner: " + tournamentRounds.Dequeue()[0];
+            isTournamentMode = false;
+            return;
+        }
+        
+        var currentRound = tournamentRounds.Dequeue();
+        gameLog.Text += "\nStarting Next Round with Players: " + string.Join(", ", currentRound);
+        List<string> winners = SimulateTournamentRound(currentRound);
+        tournamentRounds.Enqueue(winners);
+    }
+
+    private List<string> SimulateTournamentRound(List<string> players)
+    {
+        Random rnd = new Random();
+        List<string> winners = new List<string>();
+        for (int i = 0; i < players.Count / 2; i++)
+        {
+            string winner = players[rnd.Next(players.Count)];
+            winners.Add(winner);
+            gameLog.Text += "\nMatch: " + players[i * 2] + " vs " + players[i * 2 + 1] + " - Winner: " + winner;
+        }
+        return winners;
+    }
+}

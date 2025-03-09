@@ -1,0 +1,105 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Media;
+using System.Threading.Tasks;
+using System.Net.Sockets;
+using System.Net;
+using System.Text;
+using System.Threading;
+
+public class PluckGameForm : Form
+{
+    private Label dealerLabel;
+    private Label trumpLabel;
+    private Button playRoundButton;
+    private Button startTournamentButton;
+    private Button rankedMatchButton;
+    private Button achievementsButton;
+    private ListBox[] playerHands;
+    private PictureBox[] playerAvatars;
+    private Button playCardButton;
+    private Button pluckCardButton;
+    private Button tutorialButton;
+    private Button settingsButton;
+    private Button replayButton;
+    private TextBox gameLog;
+    private Label trickLabel;
+    private Label pluckInstructionLabel;
+    private ComboBox pluckSelectionBox;
+    private Label statsLabel;
+    private Label leaderboardLabel;
+    private SoundPlayer cardPlaySound;
+    private SoundPlayer pluckSound;
+    private Dictionary<string, int> playerWins;
+    private Dictionary<string, int> playerRankings;
+    private Dictionary<string, string> playerAchievements;
+    private bool isTournamentMode;
+    private string selectedTheme = "Classic";
+
+    private Game game;
+    private string currentPlayer;
+    private string plucker;
+    private string pluckee;
+
+    public PluckGameForm(bool multiplayerMode)
+    {
+        this.Text = "Pluck Card Game - Achievements";
+        this.Size = new Size(1000, 1000);
+        SetTheme(selectedTheme);
+
+        dealerLabel = new Label() { Text = "Dealer: ", Location = new Point(20, 20), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        trumpLabel = new Label() { Text = "Trump: ", Location = new Point(20, 50), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        
+        playRoundButton = new Button() { Text = "Play Round", Location = new Point(20, 80), Font = new Font("Arial", 10), BackColor = Color.Gold };
+        playRoundButton.Click += PlayRound_Click;
+
+        startTournamentButton = new Button() { Text = "Start Tournament", Location = new Point(300, 80), Font = new Font("Arial", 10), BackColor = Color.Red };
+        startTournamentButton.Click += StartTournament;
+        
+        rankedMatchButton = new Button() { Text = "Find Ranked Match", Location = new Point(600, 80), Font = new Font("Arial", 10), BackColor = Color.Cyan };
+        rankedMatchButton.Click += StartRankedMatch;
+        
+        achievementsButton = new Button() { Text = "Achievements", Location = new Point(720, 80), Font = new Font("Arial", 10), BackColor = Color.LightBlue };
+        achievementsButton.Click += ShowAchievements;
+
+        settingsButton = new Button() { Text = "Settings", Location = new Point(720, 120), Font = new Font("Arial", 10), BackColor = Color.Orange };
+        settingsButton.Click += OpenSettings;
+
+        replayButton = new Button() { Text = "Replay Match", Location = new Point(720, 160), Font = new Font("Arial", 10), BackColor = Color.LightGreen, Enabled = false };
+        replayButton.Click += StartReplay;
+
+        gameLog = new TextBox() { Location = new Point(20, 500), Size = new Size(960, 200), Multiline = true, ReadOnly = true, Font = new Font("Arial", 10), BackColor = Color.Black, ForeColor = Color.LimeGreen };
+        trickLabel = new Label() { Text = "Trick in Progress: ", Location = new Point(20, 710), Size = new Size(960, 30), Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+
+        this.Controls.Add(dealerLabel);
+        this.Controls.Add(trumpLabel);
+        this.Controls.Add(playRoundButton);
+        this.Controls.Add(startTournamentButton);
+        this.Controls.Add(rankedMatchButton);
+        this.Controls.Add(achievementsButton);
+        this.Controls.Add(settingsButton);
+        this.Controls.Add(replayButton);
+        this.Controls.Add(gameLog);
+        this.Controls.Add(trickLabel);
+
+        playerAchievements = new Dictionary<string, string>()
+        {
+            { "First Win", "Win your first match" },
+            { "Pluck Master", "Successfully pluck 10 times" },
+            { "Unbeatable", "Win 5 ranked matches in a row" }
+        };
+    }
+
+    private void ShowAchievements(object sender, EventArgs e)
+    {
+        string achievementsText = "Your Achievements:\n";
+        foreach (var achievement in playerAchievements)
+        {
+            achievementsText += $"{achievement.Key}: {achievement.Value}\n";
+        }
+        MessageBox.Show(achievementsText, "Achievements", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+}

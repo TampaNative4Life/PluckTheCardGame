@@ -1,0 +1,98 @@
+using System;
+using System.Collections.Generic;
+
+class Card
+{
+    public string Suit { get; set; }
+    public string Rank { get; set; }
+
+    public Card(string suit, string rank)
+    {
+        Suit = suit;
+        Rank = rank;
+    }
+
+    public override string ToString()
+    {
+        return $"{Rank} of {Suit}";
+    }
+}
+
+class Deck
+{
+    private List<Card> cards;
+    private static readonly string[] Suits = { "Hearts", "Diamonds", "Clubs", "Spades" };
+    private static readonly string[] Ranks = { "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A" };
+
+    public Deck()
+    {
+        cards = CreateDeck();
+    }
+
+    private List<Card> CreateDeck()
+    {
+        List<Card> deck = new List<Card>();
+        foreach (string suit in Suits)
+        {
+            foreach (string rank in Ranks)
+            {
+                if (!(rank == "2" && suit != "Clubs")) // Remove all deuces except 2 of Clubs
+                {
+                    deck.Add(new Card(suit, rank));
+                }
+            }
+        }
+        deck.Add(new Card("Joker", "Big Joker"));
+        deck.Add(new Card("Joker", "Little Joker"));
+        return deck;
+    }
+
+    public void Shuffle()
+    {
+        Random rng = new Random();
+        for (int i = cards.Count - 1; i > 0; i--)
+        {
+            int j = rng.Next(i + 1);
+            (cards[i], cards[j]) = (cards[j], cards[i]);
+        }
+    }
+
+    public Dictionary<string, List<Card>> Deal(int numPlayers, int cardsPerPlayer)
+    {
+        Dictionary<string, List<Card>> hands = new Dictionary<string, List<Card>>();
+        for (int i = 1; i <= numPlayers; i++)
+        {
+            hands[$"Player {i}"] = new List<Card>();
+        }
+
+        for (int i = 0; i < cardsPerPlayer; i++)
+        {
+            foreach (var player in hands.Keys)
+            {
+                hands[player].Add(cards[0]);
+                cards.RemoveAt(0);
+            }
+        }
+        return hands;
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Deck deck = new Deck();
+        deck.Shuffle();
+        string[] players = { "Player 1", "Player 2", "Player 3" };
+        Random rng = new Random();
+        string dealer = players[rng.Next(players.Length)];
+        
+        Console.WriteLine($"Dealer: {dealer}\n");
+        Dictionary<string, List<Card>> hands = deck.Deal(3, 17);
+
+        foreach (var player in hands)
+        {
+            Console.WriteLine($"{player.Key}'s hand: {string.Join(", ", player.Value)}\n");
+        }
+    }
+}

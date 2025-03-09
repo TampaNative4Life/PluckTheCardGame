@@ -1,0 +1,118 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Media;
+using System.Threading.Tasks;
+using System.Net.Sockets;
+using System.Net;
+using System.Text;
+using System.Threading;
+
+public class PluckGameForm : Form
+{
+    private Label dealerLabel;
+    private Label trumpLabel;
+    private Button playRoundButton;
+    private ListBox[] playerHands;
+    private Button playCardButton;
+    private Button pluckCardButton;
+    private Button tutorialButton;
+    private Button hostGameButton;
+    private Button joinGameButton;
+    private Button settingsButton;
+    private Button replayButton;
+    private TextBox gameLog;
+    private TextBox chatInput;
+    private TextBox chatBox;
+    private Button sendChatButton;
+    private Label trickLabel;
+    private Label pluckInstructionLabel;
+    private ComboBox pluckSelectionBox;
+    private Label statsLabel;
+    private Label leaderboardLabel;
+    private SoundPlayer cardPlaySound;
+    private SoundPlayer pluckSound;
+    private Dictionary<string, int> playerWins;
+    private Dictionary<string, int> aiMemory;
+    private List<string> matchHistory;
+    private int replayIndex;
+
+    private Game game;
+    private string currentPlayer;
+    private string plucker;
+    private string pluckee;
+
+    public PluckGameForm(bool multiplayerMode)
+    {
+        this.Text = "Pluck Card Game";
+        this.Size = new Size(1000, 950);
+        this.BackColor = Color.DarkGreen;
+
+        dealerLabel = new Label() { Text = "Dealer: ", Location = new Point(20, 20), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        trumpLabel = new Label() { Text = "Trump: ", Location = new Point(20, 50), AutoSize = true, Font = new Font("Arial", 12, FontStyle.Bold), ForeColor = Color.White };
+        
+        playRoundButton = new Button() { Text = "Play Round", Location = new Point(20, 80), Font = new Font("Arial", 10), BackColor = Color.Gold };
+        playRoundButton.Click += PlayRound_Click;
+
+        playCardButton = new Button() { Text = "Play Card", Location = new Point(300, 80), Font = new Font("Arial", 10), BackColor = Color.Gold };
+        playCardButton.Click += PlayCard_Click;
+
+        pluckCardButton = new Button() { Text = "Pluck Card", Location = new Point(500, 80), Font = new Font("Arial", 10), Enabled = false, BackColor = Color.Gold };
+        pluckCardButton.Click += PluckCard_Click;
+
+        tutorialButton = new Button() { Text = "Tutorial", Location = new Point(720, 80), Font = new Font("Arial", 10), BackColor = Color.LightBlue };
+        tutorialButton.Click += ShowTutorial;
+
+        settingsButton = new Button() { Text = "Settings", Location = new Point(720, 120), Font = new Font("Arial", 10), BackColor = Color.Orange };
+        settingsButton.Click += OpenSettings;
+
+        replayButton = new Button() { Text = "Replay Match", Location = new Point(720, 160), Font = new Font("Arial", 10), BackColor = Color.LightGreen, Enabled = false };
+        replayButton.Click += StartReplay;
+
+        chatBox = new TextBox() { Location = new Point(20, 800), Size = new Size(960, 100), Multiline = true, ReadOnly = true, Font = new Font("Arial", 10), BackColor = Color.Black, ForeColor = Color.White };
+        chatInput = new TextBox() { Location = new Point(20, 910), Size = new Size(850, 30), Font = new Font("Arial", 10) };
+        sendChatButton = new Button() { Text = "Send", Location = new Point(880, 910), Size = new Size(100, 30), Font = new Font("Arial", 10), BackColor = Color.LightGray };
+        sendChatButton.Click += SendChatMessage;
+
+        this.Controls.Add(dealerLabel);
+        this.Controls.Add(trumpLabel);
+        this.Controls.Add(playRoundButton);
+        this.Controls.Add(playCardButton);
+        this.Controls.Add(pluckCardButton);
+        this.Controls.Add(tutorialButton);
+        this.Controls.Add(settingsButton);
+        this.Controls.Add(replayButton);
+        this.Controls.Add(chatBox);
+        this.Controls.Add(chatInput);
+        this.Controls.Add(sendChatButton);
+
+        matchHistory = new List<string>();
+        replayIndex = 0;
+    }
+
+    private void SaveMatchHistory(string action)
+    {
+        matchHistory.Add(action);
+        replayButton.Enabled = true;
+    }
+
+    private async void StartReplay(object sender, EventArgs e)
+    {
+        replayIndex = 0;
+        gameLog.Text = "Replaying last match...";
+        foreach (var action in matchHistory)
+        {
+            await Task.Delay(1000);
+            gameLog.Text += "\n" + action;
+        }
+        gameLog.Text += "\nReplay complete!";
+    }
+
+    private void PlayCard_Click(object sender, EventArgs e)
+    {
+        string action = "Player played a card"; // Replace with actual card details
+        SaveMatchHistory(action);
+    }
+}
